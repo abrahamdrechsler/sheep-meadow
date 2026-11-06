@@ -1,0 +1,51 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+import {create} from '../src/meadow3d.js';
+
+const noop=()=>{},motion={matches:false};
+globalThis.devicePixelRatio=1;
+globalThis.matchMedia=()=>motion;
+globalThis.document={createElement:()=>({width:0,height:0,getContext:()=>new Proxy({getImageData:(x,y,w,h)=>({data:new Uint8ClampedArray(w*h*4)})},{get:(o,k)=>o[k]||noop,set:()=>true})})};
+let scene,renderer;
+class FakeRenderer{constructor(){renderer=this;this.shadowMap={};}setPixelRatio(){}setSize(){}render(s){scene=s;s.updateMatrixWorld(true);}}
+const view=create({clientWidth:1280,clientHeight:800},FakeRenderer);
+const base={id:'p0',n:0,x:600,y:400,z:0,walk:.3,heading:.7,ko:0,bite:0,health:3,hat:2,baa:0,color:'#eaa0a0',woolColor:'#a9d9f3',dragon:0,fire:0,bbq:false};
+function frame(s,t,world){if(world!==undefined)view.world(world);view.begin();view.sheep(s);view.render(t);}
+frame(base,0);
+const egg=scene.getObjectByName('dragon-egg'),day=scene.background.clone();
+assert.equal(egg.visible,false);assert.equal(scene.getObjectByName('red-dragon'),undefined);assert.equal(renderer.toneMappingExposure,1.05);
+console.log('PASS renderer remains backward-compatible without world state');
+const world={egg:{x:460,y:360,z:28,heading:.4,roll:1.3,hits:1},dragonOwner:null};
+frame(base,.1,world);
+assert.equal(egg.visible,true);assert.equal(egg.children[0].rotation.z,-1.3);assert.equal(scene.getObjectByName('egg-cracks').visible,true);assert.equal(scene.getObjectsByProperty('name','dragon-egg').length,1);
+const bounceY=egg.position.y;world.egg.z=0;frame(base,.2,world);assert.ok(Math.abs(bounceY-egg.position.y-.28)<1e-10);
+console.log('PASS exactly one speckled egg follows world bounce, roll and cracked state');
+const powered={...base,dragon:30,fire:.3};frame(powered,.3,{egg:null,dragonOwner:'p0'});
+const dragon=scene.getObjectByName('red-dragon'),bare=()=>scene.getObjectByName('bbq-bare-sheep'),fire=scene.getObjectByName('directional-fire-breath'),tilt=dragon.parent,body=tilt.children.find(o=>o!==dragon&&o.isGroup);
+assert.ok(dragon.visible);assert.equal(body.visible,false);assert.equal(egg.visible,false);assert.ok(fire.visible);assert.ok(dragon.getObjectByName('dragon-left-wing'));assert.ok(dragon.getObjectByName('dragon-right-wing'));assert.ok(dragon.getObjectByName('dragon-tail'));assert.equal(dragon.rotation.y,-Math.atan2(Math.sin(base.heading)*1.2,Math.cos(base.heading)));assert.ok(fire.position.x>1);assert.ok(fire.getObjectsByProperty('name','flame-tongue').length>=3);
+scene.traverse(o=>{assert.ok(o.position.toArray().every(Number.isFinite));if(o.isMesh){assert.ok([...o.geometry.attributes.position.array].every(Number.isFinite));assert.ok(o.scale.toArray().every(Number.isFinite));}});
+console.log('PASS red mesh dragon replaces sheep with wings, horns, tail and directional fire');
+for(let i=4;i<35;i++)frame(powered,i*.1,{egg:null,dragonOwner:'p0'});
+assert.ok(scene.background.distanceToSquared?scene.background.distanceToSquared(day)>0:scene.background.getHex()!==day.getHex());assert.ok(renderer.toneMappingExposure<.86);assert.ok(scene.getObjectsByProperty('type','HemisphereLight')[0].intensity<.75);
+frame({...powered,fire:0},3.5);assert.equal(fire.visible,false);
+console.log('PASS scene darkens smoothly and fire switches off after its animation timer');
+frame({...base,ko:5,bbq:true},3.6,{egg:null,dragonOwner:null});assert.equal(dragon.visible,false);assert.ok(bare().visible);assert.equal(body.visible,false);assert.equal(tilt.rotation.z,Math.PI);const blackColors=new Set();bare().traverse(o=>{if(o.isMesh)blackColors.add(o.material.color.getHexString());});assert.ok(blackColors.has('272823'));assert.ok(blackColors.has('181d1b'));assert.ok(!blackColors.has('a9d9f3'));
+console.log('PASS BBQ victims are black, furless and upside-down during KO');
+for(let i=37;i<80;i++)frame(base,i*.1,{egg:null,dragonOwner:null});
+assert.equal(bare().visible,false);assert.equal(body.visible,true);assert.equal(dragon.visible,false);assert.equal(tilt.rotation.z,0);assert.ok(body.getObjectByName('Party hat').visible);const restored=[];body.traverse(o=>{if(o.isMesh&&o.material.color.getHexString()==='a9d9f3')restored.push(o);});assert.ok(restored.length>30);assert.ok(renderer.toneMappingExposure>1.049);assert.equal(scene.background.getHexString(),day.getHexString());
+console.log('PASS expiration restores daylight, selected wool and hat without material contamination');
+motion.matches=true;frame({...powered,hit:.3},8,{egg:{...world.egg,z:50,roll:2},dragonOwner:'p0'});const wings=dragon.getObjectByName('dragon-left-wing'),tail=dragon.getObjectByName('dragon-tail');assert.equal(tilt.position.x,0);assert.equal(wings.rotation.x,0);assert.equal(tail.rotation.y,0);assert.equal(egg.children[0].rotation.z,0);assert.equal(fire.scale.y,1);const stillY=egg.position.y;frame(powered,8.1,{egg:{...world.egg,z:90,roll:4},dragonOwner:'p0'});assert.equal(egg.position.y,stillY);assert.equal(fire.scale.y,1);
+console.log('PASS reduced motion disables shake, wing/tail oscillation, egg roll and fire flicker');
+
+const calls=[],styles=[],labels=[];let fillStyle;
+const ctx=new Proxy({fillText:(...v)=>labels.push(v),fill:(...v)=>calls.push(['fill',fillStyle,...v]),translate:(...v)=>calls.push(['translate',...v]),rotate:(...v)=>calls.push(['rotate',...v]),ellipse:(...v)=>calls.push(['ellipse',...v]),fillRect:(...v)=>calls.push(['fillRect',fillStyle,...v])},{get:(o,k)=>o[k]||noop,set:(o,k,v)=>{if(k==='fillStyle'){fillStyle=v;styles.push(v);}if(k==='strokeStyle')styles.push(v);return true;}});
+const sandbox={window:{},Math,matchMedia:()=>motion};vm.createContext(sandbox);vm.runInContext(fs.readFileSync(new URL('../dist/fallback.js',import.meta.url),'utf8'),sandbox);const fallback=sandbox.window.MeadowFallback.create({getContext:()=>ctx});
+motion.matches=false;fallback.world(world);fallback.begin();assert.ok(styles.includes('#f2d28e'));assert.ok(styles.includes('#894631'));calls.length=0;fallback.sheep(powered);assert.ok(styles.includes('#bd352e'));assert.ok(styles.includes('#ef702c'));assert.ok(calls.some(v=>v[0]==='rotate'&&v[1]===powered.heading));assert.ok(labels.some(v=>v[0].includes('DRAGON 30s')));
+fallback.world({egg:null,dragonOwner:'p0'});for(let i=0;i<40;i++)fallback.render(i*.1);fallback.begin();assert.ok(styles.includes('#222236'));
+console.log('PASS Canvas fallback draws the egg, directional red dragon/fire, timer and darkened meadow');
+styles.length=0;calls.length=0;fallback.sheep({...base,ko:5,bbq:true});assert.ok(styles.includes('#272823'));assert.ok(!styles.includes('#a9d9f3'));assert.ok(calls.some(v=>v[0]==='rotate'&&v[1]===Math.PI+base.heading));assert.ok(labels.some(v=>v[0].includes('BBQ 5s')));styles.length=0;fallback.sheep(base);assert.ok(styles.includes('#a9d9f3'));
+console.log('PASS Canvas BBQ loses its wool, flips upside-down and restores selected wool on recovery');
+motion.matches=true;calls.length=0;fallback.world({egg:{...world.egg,z:50,roll:2},dragonOwner:'p0'});fallback.begin();assert.ok(calls.some(v=>v[0]==='rotate'&&v[1]===0));const eggMove=calls.find(v=>v[0]==='translate'&&v[1]===world.egg.x);assert.equal(eggMove[2],world.egg.y-3.5-21);
+console.log('PASS Canvas reduced motion caps egg bounce and disables egg rolling');
+console.log('10 dragon renderer checks passed (scene graph and mocked Canvas, no GPU rasterization)');
