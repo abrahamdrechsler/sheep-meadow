@@ -1,0 +1,11 @@
+const assert=require('node:assert/strict'),M=require('../dist/core.js');let count=0;function test(n,f){f();count++;console.log('PASS '+n);}const idle={x:0,y:0,jump:false,baa:false,bite:false,hat:false};const pad=(x,y)=>({axes:[x,y],buttons:[]});
+test('radial deadzone suppresses drift',()=>assert.deepEqual(M.stick(.1,.1),{x:0,y:0}));
+test('radial deadzone retains shallow 10-degree analog angle',()=>{const angle=Math.PI/18,i=M.input(pad(Math.cos(angle)*.8,Math.sin(angle)*.8));assert.ok(Math.abs(Math.atan2(i.y,i.x)-angle)<1e-10);assert.ok(i.y>0);});
+test('24 arbitrary stick directions retain their exact angles',()=>{for(let n=0;n<24;n++){const a=n*Math.PI/12+.04,i=M.input(pad(Math.cos(a)*.7,Math.sin(a)*.7));assert.ok(Math.abs(i.x*Math.sin(a)-i.y*Math.cos(a))<1e-10);assert.ok(i.x*Math.cos(a)+i.y*Math.sin(a)>0);}});
+test('analog deflection changes speed without diagonal boost',()=>{let low=M.stick(.4,0),high=M.stick(.8,0);assert.ok(high.x>low.x*2);assert.ok(Math.abs(Math.hypot(...Object.values(M.stick(.8,.8)))-1)<1e-10);});
+test('heading turns smoothly, retains angle when idle',()=>{let s=M.sheep('p',0),i={...idle,x:.6,y:.8};M.step(s,i,.016);assert.ok(s.heading>0&&s.heading<Math.atan2(.8,.6));for(let n=0;n<90;n++)M.step(s,i,.016);assert.ok(Math.abs(s.heading-Math.atan2(.8,.6))<1e-8);let h=s.heading;M.step(s,idle,.05);assert.equal(s.heading,h);});
+test('heading wraps across pi by shortest route',()=>{const t=M.turn(Math.PI-.05,-Math.PI+.05,.016);assert.ok(t>Math.PI-.05&&t<Math.PI+.05);});
+test('bite hits diagonal target and misses lateral and rear targets',()=>{const a=M.sheep('a',0),b=M.sheep('b',1),c=M.sheep('c',2),d=M.sheep('d',3);a.x=500;a.y=350;a.heading=Math.PI/4;a.attack=true;b.x=540;b.y=390;c.x=540;c.y=310;d.x=460;d.y=310;M.combat([a,b,c,d]);assert.equal(b.health,2);assert.equal(c.health,3);assert.equal(d.health,3);});
+test('upward bite targets upward sheep rather than sideways',()=>{const a=M.sheep('a',0),b=M.sheep('b',1);a.heading=-Math.PI/2;b.x=a.x;b.y=a.y-60;a.attack=true;M.combat([a,b]);assert.equal(b.health,2);});
+test('D-pad remains normalized and overrides stick',()=>{const p=pad(-.5,.4);p.buttons=Array.from({length:16},(_,i)=>({pressed:i===12||i===15}));const i=M.input(p);assert.ok(Math.abs(i.x-Math.SQRT1_2)<1e-10);assert.ok(Math.abs(i.y+Math.SQRT1_2)<1e-10);});
+console.log(count+' analog movement tests passed');

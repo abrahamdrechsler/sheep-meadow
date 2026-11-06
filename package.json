@@ -1,0 +1,1 @@
+{"name":"sheep-meadow","private":true,"scripts":{"build":"esbuild src/meadow3d.js --bundle --format=iife --global-name=Meadow3D --outfile=dist/meadow3d.js --minify"},"dependencies":{"three":"0.180.0"},"devDependencies":{"esbuild":"0.25.10"}}
