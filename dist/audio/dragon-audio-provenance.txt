@@ -1,0 +1,32 @@
+Sheep Meadow dragon audio update — 2026-11-06
+
+Music: Video Dungeon Boss — Kevin MacLeod (incompetech.com)
+Source: https://incompetech.com/music/royalty-free/index.html?Search=Search&isrc=USUAN1200065
+License: Creative Commons Attribution 4.0
+https://creativecommons.org/licenses/by/4.0/
+Creator's source page verified 2026-11-06: track title, artist, 142 BPM,
+ISRC USUAN1200065 and explicit CC BY 4.0 attribution text.
+Existing legitimately sourced 30-second excerpt retained, adapted with:
+atempo 1.08 (approximately 153 BPM), +4dB bass around 105Hz,
++1.5dB treble around 2600Hz, gain, compression and peak limiting.
+Final encoded duration approximately 27.8 seconds. Credits are visible
+through the game's audio-credits.html. No endorsement is implied.
+
+New effects: dragon-roar.mp3, egg-hit.mp3, egg-break.mp3,
+dragon-transform.mp3. Original procedural synthesis for this game,
+using harmonic oscillators, deterministic generated noise, filtering and
+amplitude envelopes. No sampled third-party recordings are incorporated.
+No third-party license is claimed or needed for those source recordings.
+Durations before MP3 container padding: 1.85, 0.22, 0.85, 1.65 seconds.
+All effects faded at boundaries and encoded as 112 kbps / 32kHz mono MP3.
+
+Verification: FFmpeg successfully decoded all five changed/new files.
+Peak levels after encoding: boss -1.1 dBFS; new effects -2.6 to -2.8 dBFS.
+This checks decoding/levels, not subjective listening; no actual audition
+was performed in this environment.
+
+Head bounce addition: head-bounce.mp3 is an original synthesized sine
+oscillator spring/pluck with a quiet second harmonic, rising/settling pitch
+and a short exponential decay. No third-party samples. Duration 0.32s
+before MP3 padding; 112 kbps / 32kHz mono. FFmpeg decode and peak checks
+performed; not subjectively auditioned.

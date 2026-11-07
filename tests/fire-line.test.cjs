@@ -1,0 +1,19 @@
+const assert=require('node:assert/strict'),M=require('../dist/core.js');
+let count=0;const idle={x:0,y:0},test=(name,fn)=>{fn();count++;console.log('PASS '+name);};
+function setup(){const a=M.sheep('a',0),w=M.world();a.dragon=30;w.dragonOwner=a.id;w.dragonTime=30;return{a,w};}
+function shoot(a,w){M.step(a,{...idle,bite:true},0);M.combat([a],w);}
+function target(a,dx,dy,z=0){return Object.assign(M.sheep('b',1),{x:a.fireLine.x+dx,y:a.fireLine.y+dy,z});}
+test('finite capsule exact length, width, rounded ends and vertical boundary',()=>{
+ for(const [dx,dy,z,hit]of [[0,0,0,true],[-.001,0,0,false],[230,0,0,true],[230.001,0,0,false],[100,16,0,true],[100,16.001,0,false],[1,16,0,false],[16,16,0,true],[100,0,84.999,true],[100,0,85,false],[100,80,0,false]]){const {a,w}=setup();shoot(a,w);const b=target(a,dx,dy,z);M.combat([a,b],w);assert.equal(b.bbq,hit,JSON.stringify([dx,dy,z]));}
+});
+test('diagonal capsule uses exact same dimensions',()=>{const{a,w}=setup();a.heading=Math.PI/4;shoot(a,w);const c=Math.SQRT1_2;for(const across of [16,16.01]){const b=target(a,100*c-across*c,100*c+across*c);M.combat([a,b],w);assert.equal(b.bbq,across===16);}});
+test('movement and turning never drag an active fire line',()=>{const{a,w}=setup();shoot(a,w);const captured={...a.fireLine};for(let n=0;n<5;n++)M.step(a,{x:0,y:1},.05);assert.deepEqual(a.fireLine,captured);assert.ok(a.y>captured.y&&a.heading>0);const b=target(a,180,0);M.combat([a,b],w);assert.equal(b.bbq,true);assert.equal(w.scorches.length,1);});
+test('entering active fire burns, expired fire never burns',()=>{const{a,w}=setup();shoot(a,w);const b=target(a,120,30);M.combat([a,b],w);assert.equal(b.health,3);b.y=a.fireLine.y;M.step(a,idle,.549);M.combat([a,b],w);assert.equal(b.bbq,true);const c=target(a,120,0);M.step(a,idle,.001);M.combat([a,c],w);assert.equal(c.health,3);});
+test('recharge rejects early repress and permits exactly two seconds',()=>{const{a,w}=setup();shoot(a,w);assert.equal(a.biteCool,2);M.step(a,idle,1.998);M.step(a,{...idle,bite:true},.001);assert.equal(a.fireAttack,false);M.step(a,idle,0);M.step(a,{...idle,bite:true},.001);assert.equal(a.fireAttack,true);assert.equal(a.biteCool,2);});
+test('held button never auto fires even after cooldown expires',()=>{const{a,w}=setup();shoot(a,w);for(let n=0;n<5;n++){M.step(a,{...idle,bite:true},1);assert.equal(a.fireAttack,false);}assert.equal(a.biteCool,0);});
+test('dragon is slower than sheep at matching input strength',()=>{const{a}=setup(),b=M.sheep('b',1);b.x=a.x;M.step(a,{x:1,y:0},.05);M.step(b,{x:1,y:0},.05);assert.equal(a.x-480,8.75);assert.equal(b.x-480,10.5);});
+test('scorch paths are captured, bounded and expire during dragon',()=>{const{a,w}=setup();for(let n=0;n<30;n++){M.step(a,idle,2);shoot(a,w);}assert.equal(w.scorches.length,24);assert.equal(w.scorches[0].id,7);assert.equal(w.scorches[0].maxLife,12);M.stepWorld(w,[a],11.999);assert.equal(w.scorches.length,24);M.stepWorld(w,[a],.001);assert.equal(w.scorches.length,0);assert.ok(a.dragon>0);});
+test('high airborne bursts do not scorch ground',()=>{const{a,w}=setup();a.z=85;shoot(a,w);assert.equal(w.scorches.length,0);});
+test('disconnect cancels burst but retains and ages cooldown before reconnect',()=>{const{a,w}=setup();shoot(a,w);a.connected=false;M.step(a,{x:1,bite:true},.1);assert.equal(a.fire,0);assert.equal(a.fireLine,null);assert.equal(a.biteCool,1.9);a.connected=true;M.step(a,{...idle,bite:true},.1);assert.equal(a.fireAttack,false);M.step(a,idle,1.8);M.step(a,{...idle,bite:true},0);assert.equal(a.fireAttack,true);});
+test('dragon expiry removes fire line while scorch ground remains briefly',()=>{const{a,w}=setup();shoot(a,w);w.dragonTime=.1;M.stepWorld(w,[a],.1);assert.equal(a.fireLine,null);assert.equal(a.fire,0);assert.equal(w.scorches.length,1);assert.equal(w.nextEggIn,120);});
+console.log(count+' line-fire core tests passed');
