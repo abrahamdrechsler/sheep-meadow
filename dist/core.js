@@ -6,7 +6,7 @@ function axis(n){return Math.abs(n||0)<.18?0:Math.sign(n)*(Math.abs(n)-.18)/.82;
 function stick(x,y){x=Number.isFinite(x)?Math.max(-1,Math.min(1,x)):0;y=Number.isFinite(y)?Math.max(-1,Math.min(1,y)):0;const length=Math.hypot(x,y);if(length<=.18)return{x:0,y:0};const strength=(Math.min(length,1)-.18)/.82;return{x:x/length*strength,y:y/length*strength};}
 function input(p){let {x,y}=stick(p.axes?.[0],p.axes?.[1]);const b=i=>!!p.buttons?.[i]?.pressed;const dx=(b(15)?1:0)-(b(14)?1:0),dy=(b(13)?1:0)-(b(12)?1:0);if(dx||dy){const length=Math.hypot(dx,dy);x=dx/length;y=dy/length;}return{x,y,jump:b(0),baa:b(2),bite:b(1),hat:b(3),wool:b(5)};}
 function turn(current,target,dt){const delta=Math.atan2(Math.sin(target-current),Math.cos(target-current));return current+delta*(1-Math.exp(-18*dt));}
-const rules=Object.freeze({eggInterval:90,bulldozerDuration:30,bulldozerSpeed:150,chargeSpeed:1400,chargeCooldown:1.2,chargeRadius:40,trackDuration:12,maxTracks:72,eggBites:3,dragonDuration:30,fireDuration:.55,fireRange:230,fireHeight:85,fireRadius:16,fireCooldown:2,sheepSpeed:210,dragonSpeed:175,scorchDuration:12,maxScorches:24,biteRange:83,biteHeight:55,biteCos:.5,attackCooldown:.8,koDuration:5,jumpSpeed:480,gravity:1000,fallGravity:600,stompHeight:85,stompRadius:30,squashDuration:.5});
+const rules=Object.freeze({eggInterval:50,runoverDuration:5,launchSpeed:1250,launchDuration:1.6,bulldozerDuration:30,bulldozerSpeed:150,chargeSpeed:1400,chargeCooldown:1.2,chargeRadius:40,trackDuration:12,maxTracks:72,eggBites:3,dragonDuration:30,fireDuration:.55,fireRange:230,fireHeight:85,fireRadius:16,fireCooldown:2,sheepSpeed:210,dragonSpeed:175,scorchDuration:12,maxScorches:24,biteRange:83,biteHeight:55,biteCos:.5,attackCooldown:.8,koDuration:5,jumpSpeed:560,gravity:850,fallGravity:450,stompHeight:85,stompRadius:30,squashDuration:.5});
 function elapsed(dt){return Number.isFinite(dt)?Math.max(0,dt):0;}
 function countdown(value,dt){const left=(value||0)-dt;return left>1e-9?left:0;}
 function members(flock){return Array.from(flock instanceof Map?flock.values():flock||[]);}
@@ -17,7 +17,7 @@ function terrainHeight(x,z){
   return .08+rolling*(1-.82*Math.exp(-(((x-river)/.8)**2)));
 }
 function groundHeight(x,y){return 100*terrainHeight((x-600)/60,(y-400)/50);}
-function sheep(id,n){return{id,n,x:480+n*90,y:350,z:0,vz:0,squash:0,motion:null,face:1,heading:0,walk:0,hat:0,woolIndex:-1,woolColor:null,baa:0,cool:0,bite:0,biteCool:0,attack:false,health:3,hit:0,ko:0,dragon:0,bulldozer:0,charge:null,chargeSegment:null,chargeSerial:0,chargeCool:0,launch:null,fire:0,fireLine:null,fireAttack:false,bbq:false,prev:{},connected:true,color:colors[n%4]};}
+function sheep(id,n){return{id,n,x:480+n*90,y:350,z:0,vz:0,squash:0,motion:null,face:1,heading:0,walk:0,hat:0,woolIndex:-1,woolColor:null,baa:0,cool:0,bite:0,biteCool:0,attack:false,health:3,hit:0,ko:0,dragon:0,bulldozer:0,charge:null,chargeSegment:null,chargeSerial:0,chargeCool:0,runover:0,launch:null,fire:0,fireLine:null,fireAttack:false,bbq:false,prev:{},connected:true,color:colors[n%4]};}
 
 // Movement remains capped to avoid teleporting after a stalled frame. Timers use
 // the full elapsed time, so a stall cannot extend a KO, cooldown, or power-up.
@@ -28,6 +28,21 @@ function step(s,i,dt){
   s.squash=countdown(s.squash,seconds);
   if(s.connected===false)i={x:0,y:0};
   s.attack=false;s.fireAttack=false;s.hit=countdown(s.hit,seconds);s.fire=countdown(s.fire,seconds);
+  // Runover is a nonfatal out-of-play state, separate from bite/fire KO.
+  // Analytic flight uses real active time so a stalled frame cannot trap a sheep.
+  if(s.runover>0){
+    s.runover=countdown(s.runover,seconds);s.prev={...i};s.motion=null;
+    s.attack=false;s.fireAttack=false;s.bite=0;s.fire=0;s.fireLine=null;s.baa=0;s.squash=0;
+    const flight=s.launch;
+    if(flight){
+      flight.elapsed=Math.min(flight.duration,flight.elapsed+seconds);const t=flight.elapsed;
+      s.x=flight.x+flight.vx*t;s.y=flight.y+flight.vy*t;
+      s.z=Math.max(0,flight.z+850*t-500*t*t);s.vz=850-1000*t;
+      flight.offMap=s.x< -180||s.x>1380||s.y< -120||s.y>920;
+    }
+    if(s.runover===0){s.launch=null;s.health=3;s.x=480+s.n*90;s.y=350;s.z=0;s.vz=0;s.biteCool=.5;s.hit=0;s.bbq=false;}
+    return;
+  }
   if(i.wool&&!s.prev.wool)cycleWool(s);
   if(s.ko>0){
     s.ko=countdown(s.ko,seconds);s.prev={...i};s.fire=0;s.fireLine=null;s.squash=0;s.motion=null;s.charge=null;s.launch=null;
@@ -59,8 +74,6 @@ function step(s,i,dt){
     distance=Math.max(0,distance);s.x+=c.dx*distance;s.y+=c.dy*distance;s.heading=Math.atan2(c.dy,c.dx);
     s.chargeSegment={x:ox,y:oy,x2:s.x,y2:s.y,charge:c};s.walk+=dt*25;
     if((c.dx< -1e-9&&s.x<=110+1e-7)||(c.dx>1e-9&&s.x>=1090-1e-7)||(c.dy< -1e-9&&s.y<=170+1e-7)||(c.dy>1e-9&&s.y>=660-1e-7)){s.charge=null;s.chargeCool=rules.chargeCooldown;s.chargeSegment.ended=true;}
-  }else if(s.launch){
-    s.x=Math.max(110,Math.min(1090,s.x+s.launch.vx*dt));s.y=Math.max(170,Math.min(660,s.y+s.launch.vy*dt));
   }else{
     const speed=(s.dragon>0?rules.dragonSpeed:s.bulldozer>0?rules.bulldozerSpeed:rules.sheepSpeed)*(s.squash>0?.25:1);
     s.x=Math.max(110,Math.min(1090,s.x+(i.x||0)*speed*dt));s.y=Math.max(170,Math.min(660,s.y+(i.y||0)*speed*dt));
@@ -123,11 +136,13 @@ function resolveCharges(w,all){
       if(w.tracks.length>rules.maxTracks)w.tracks.splice(0,w.tracks.length-rules.maxTracks);
     }
     for(const b of all){
-      if(b===a||b.ko>0||b.bulldozer>0||b.dragon>0||c.hits.includes(b.id))continue;
+      if(b===a||b.ko>0||b.runover>0||b.bulldozer>0||b.dragon>0||c.hits.includes(b.id))continue;
       const prior=b.motion||b;
       // Relative swept positions catch fast charges and moving sheep, not only endpoints.
       if(Math.min(prior.z||0,b.z||0)>70||segmentDistance(p.x-prior.x,p.y-prior.y,p.x2-b.x,p.y2-b.y,0,0)>rules.chargeRadius)continue;
-      c.hits.push(b.id);b.launch={vx:c.dx*430,vy:c.dy*430};b.vz=650;b.z=Math.max(b.z,8);b.squash=0;
+      c.hits.push(b.id);b.runover=rules.runoverDuration;
+      b.launch={vx:c.dx*rules.launchSpeed,vy:c.dy*rules.launchSpeed,x:b.x,y:b.y,z:Math.max(b.z,8),elapsed:0,duration:rules.launchDuration,offMap:false};
+      b.vz=850;b.z=b.launch.z;b.squash=0;b.attack=false;b.bite=0;b.fireAttack=false;b.fire=0;b.fireLine=null;b.baa=0;b.motion=null;
       chargeEvent(w,'launch',{...base,targetId:b.id,x:b.x,y:b.y});
     }
     for(const tree of w.trees||[]){
@@ -211,7 +226,7 @@ function knockOut(s,bbq){s.charge=null;s.chargeSegment=null;s.launch=null;s.squa
 // candidates before applying impulses to keep simultaneous contacts fair.
 function bounce(flock){
   const all=members(flock),ordered=[...all].sort((a,b)=>a.n-b.n||String(a.id).localeCompare(String(b.id))),candidates=[];
-  const eligible=s=>s.connected!==false&&s.ko<=0&&!(s.dragon>0)&&!(s.bulldozer>0)&&!s.launch;
+  const eligible=s=>s.connected!==false&&s.ko<=0&&!(s.runover>0)&&!(s.dragon>0)&&!(s.bulldozer>0)&&!s.launch;
   for(const a of ordered){
     if(!eligible(a)||!a.motion||a.vz>=0)continue;
     for(const b of ordered){
@@ -238,12 +253,12 @@ function combat(flock,w){
   // of Map insertion/reconnection order. Attack snapshots preserve traded hits.
   const all=members(flock),ordered=[...all].sort((a,b)=>a.n-b.n||String(a.id).localeCompare(String(b.id))),hits=[],eggAttackers=[];
   for(const a of ordered){
-    if(a.ko>0||a.connected===false)continue;
+    if(a.ko>0||a.runover>0||a.connected===false)continue;
     const fire=(a.fireAttack||(a.fire>0&&a.fireLine))&&a.dragon>0,bite=a.attack&&!(a.dragon>0)&&!(a.bulldozer>0);
     if(!fire&&!bite)continue;
     if(fire&&a.fireAttack){if(!a.fireLine)a.fireLine=fireLine(a);scorch(w,a.fireLine);}
     for(const b of ordered){
-      if(a===b||b.ko>0)continue;
+      if(a===b||b.ko>0||b.runover>0)continue;
       if(fire?inFire(a.fireLine,b):inFront(a,b,rules.biteRange,rules.biteHeight,rules.biteCos))hits.push({target:b,fire});
     }
     if(bite&&w?.egg&&inFront(a,w.egg,rules.biteRange,rules.biteHeight,rules.biteCos))eggAttackers.push(a);
@@ -252,14 +267,14 @@ function combat(flock,w){
   // cannot convert a previously KO'd sheep or extend anybody's respawn timer.
   hits.sort((a,b)=>Number(b.fire)-Number(a.fire));let applied=0;
   for(const {target:b,fire}of hits){
-    if(b.ko>0)continue;
+    if(b.ko>0||b.runover>0)continue;
     b.health=fire?0:Math.max(0,b.health-1);b.hit=.42;applied++;
     if(b.health===0)knockOut(b,fire);
   }
   if(w?.dragonOwner!==null&&w?.dragonOwner!==undefined){const owner=all.find(s=>s.id===w.dragonOwner);if(!owner||owner.ko>0)endDragon(w,all);}
   if(w?.bulldozerOwner!=null){const owner=all.find(s=>s.id===w.bulldozerOwner);if(!owner||owner.ko>0)endBulldozer(w,all);}
   for(const a of eggAttackers){
-    if(!w.egg||a.ko>0)continue;
+    if(!w.egg||a.ko>0||a.runover>0)continue;
     const e=w.egg;e.hits++;e.hit=.42;if(e.kind!=='bulldozer'){e.vx=Math.cos(a.heading)*125;e.vy=Math.sin(a.heading)*125;e.vz=190;}
     if(e.hits>=rules.eggBites){if(e.kind==='bulldozer')startBulldozer(w,a,all);else startDragon(w,a,all);}
   }

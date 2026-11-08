@@ -10,16 +10,16 @@ function dragon(w,a,all=[a]){eggAt(w,a.x+50,a.y);w.egg.hits=2;a.attack=true;M.co
 function tick(w,all,dt,inputs={}){M.stepWorld(w,all,dt);for(const s of all)M.step(s,inputs[s.id]||idle,dt);return M.combat(all,w);}
 function bite(w,a,all=[a]){M.step(a,{...idle,bite:true},.01);M.combat(all,w);M.step(a,idle,.2);return M.combat(all,w);}
 
-test('default egg appears at exactly 90 seconds, not before',()=>{
-  const {w}=fresh();assert.equal(w.nextEggIn,90);M.stepWorld(w,[],89.999);assert.equal(w.egg,null);
+test('default egg appears at exactly 50 seconds, not before',()=>{
+  const {w}=fresh();assert.equal(w.nextEggIn,50);M.stepWorld(w,[],49.999);assert.equal(w.egg,null);
   M.stepWorld(w,[],.001);assert.ok(w.egg);assert.equal(w.egg.hits,0);assert.equal(w.egg.id,1);
 });
 test('configurable spawn interval supports tests without changing production default',()=>{
   const w=M.world({spawnInterval:2,random:()=>.5});M.stepWorld(w,[],1.99);assert.equal(w.egg,null);M.stepWorld(w,[],.01);assert.ok(w.egg);
-  for(const value of [0,-1,Infinity,NaN])assert.equal(M.world({spawnInterval:value}).spawnInterval,90);
+  for(const value of [0,-1,Infinity,NaN])assert.equal(M.world({spawnInterval:value}).spawnInterval,50);
 });
 test('only one egg exists after arbitrarily long elapsed time',()=>{
-  const {w}=fresh();M.stepWorld(w,[],120);const first=w.egg;M.stepWorld(w,[],1e9);assert.equal(w.egg,first);assert.equal(w.eggSerial,1);assert.equal(w.nextEggIn,90);
+  const {w}=fresh();M.stepWorld(w,[],120);const first=w.egg;M.stepWorld(w,[],1e9);assert.equal(w.egg,first);assert.equal(w.eggSerial,1);assert.equal(w.nextEggIn,50);
 });
 test('egg rolls, bounces, wanders and reflects within reachable meadow bounds',()=>{
   let seed=12;const w=M.world({spawnInterval:1,random:()=>((seed=(seed*1664525+1013904223)>>>0)/4294967296)});M.stepWorld(w,[],1);
@@ -100,10 +100,10 @@ test('color selection during BBQ is retained after respawn without leaking damag
 });
 test('dragon expires at 30 seconds and restores chosen cosmetics',()=>{
   const {w,a}=fresh();Object.assign(a,{hat:2,woolIndex:2,woolColor:M.woolColors[2]});dragon(w,a);M.stepWorld(w,[a],29.999);assert.ok(a.dragon>0);a.fire=.4;a.fireAttack=true;M.stepWorld(w,[a],.001);
-  assert.equal(a.dragon,0);assert.equal(a.fire,0);assert.equal(a.fireAttack,false);assert.equal(w.dragonOwner,null);assert.equal(a.hat,2);assert.equal(a.woolColor,M.woolColors[2]);assert.equal(w.nextEggIn,90);assert.equal(w.egg,null);
+  assert.equal(a.dragon,0);assert.equal(a.fire,0);assert.equal(a.fireAttack,false);assert.equal(w.dragonOwner,null);assert.equal(a.hat,2);assert.equal(a.woolColor,M.woolColors[2]);assert.equal(w.nextEggIn,50);assert.equal(w.egg,null);
 });
 test('no egg during dragon; next egg needs a fresh two-minute interval',()=>{
-  const {w,a}=fresh();dragon(w,a);M.stepWorld(w,[a],29);assert.equal(w.egg,null);assert.equal(w.nextEggIn,90);M.stepWorld(w,[a],90);assert.equal(w.egg,null);close(w.nextEggIn,1);M.stepWorld(w,[a],1);assert.ok(w.egg);assert.equal(w.egg.id,2);
+  const {w,a}=fresh();dragon(w,a);M.stepWorld(w,[a],29);assert.equal(w.egg,null);assert.equal(w.nextEggIn,50);M.stepWorld(w,[a],50);assert.equal(w.egg,null);close(w.nextEggIn,1);M.stepWorld(w,[a],1);assert.ok(w.egg);assert.equal(w.egg.id,2);
 });
 test('large elapsed delta crosses expiration and the next spawn without losing time',()=>{
   const {w,a}=fresh();dragon(w,a);M.stepWorld(w,[a],150);assert.equal(w.dragonOwner,null);assert.equal(a.dragon,0);assert.ok(w.egg);assert.equal(w.eggSerial,2);
@@ -113,13 +113,13 @@ test('dragon countdown survives disconnect and same-slot reconnection',()=>{
   a.connected=true;M.stepWorld(w,flock,5);assert.equal(a.dragon,15);assert.equal(flock.get('pad0'),a);assert.equal(w.egg,null);
 });
 test('removed dragon owner cancels the power and resets spawn interval',()=>{
-  const {w,a,b}=fresh();dragon(w,a);M.stepWorld(w,[b],0);assert.equal(w.dragonOwner,null);assert.equal(w.dragonTime,0);assert.equal(w.nextEggIn,90);assert.equal(b.dragon,0);assert.equal(w.egg,null);
+  const {w,a,b}=fresh();dragon(w,a);M.stepWorld(w,[b],0);assert.equal(w.dragonOwner,null);assert.equal(w.dragonTime,0);assert.equal(w.nextEggIn,50);assert.equal(b.dragon,0);assert.equal(w.egg,null);
 });
 test('owner knocked out loses dragon immediately and cannot retain fire',()=>{
-  const {w,a,b}=fresh();dragon(w,a);a.health=1;b.x=a.x+40;b.heading=Math.PI;b.attack=true;a.fire=.5;M.combat([a,b],w);assert.equal(a.ko,5);assert.equal(a.dragon,0);assert.equal(a.fire,0);assert.equal(w.dragonOwner,null);assert.equal(w.nextEggIn,90);
+  const {w,a,b}=fresh();dragon(w,a);a.health=1;b.x=a.x+40;b.heading=Math.PI;b.attack=true;a.fire=.5;M.combat([a,b],w);assert.equal(a.ko,5);assert.equal(a.dragon,0);assert.equal(a.fire,0);assert.equal(w.dragonOwner,null);assert.equal(w.nextEggIn,50);
 });
 test('external owner KO is reconciled by stepWorld without a combat call',()=>{
-  const {w,a}=fresh();dragon(w,a);a.ko=5;a.health=0;M.stepWorld(w,[a],0);assert.equal(a.dragon,0);assert.equal(w.dragonOwner,null);assert.equal(w.nextEggIn,90);
+  const {w,a}=fresh();dragon(w,a);a.ko=5;a.health=0;M.stepWorld(w,[a],0);assert.equal(a.dragon,0);assert.equal(w.dragonOwner,null);assert.equal(w.nextEggIn,50);
 });
 test('expired dragon B becomes a bite and cannot use stale fire attack',()=>{
   const {w,a,b}=fresh();dragon(w,a);b.x=a.x+150;a.fireAttack=true;M.stepWorld(w,[a,b],30);M.combat([a,b],w);assert.equal(b.health,3);a.biteCool=0;M.step(a,{...idle,bite:true},.01);assert.equal(a.bite,.45);assert.equal(a.fireAttack,false);

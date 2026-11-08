@@ -22,3 +22,10 @@ const labels=[],colors=[];const ctx=new Proxy({fillText:t=>labels.push(t)},{get:
 console.log('PASS Canvas shares sign, timer, vehicle, custom wool and original hat drawing');
 
 gpuLabels.length=0;frame({...base,baa:1},3);assert.ok(gpuLabels.includes("HONK!"));assert.ok(!gpuLabels.includes("Baaa!"));labels.length=0;fallback.sheep({...base,baa:1});assert.ok(labels.includes("HONK!"));assert.ok(!labels.includes("Baaa!"));console.log("PASS both renderers label bulldozer X as HONK rather than Baaa");
+// Runover is a real out-of-play flight, distinct from knockout and head-bounce.
+const flying={...base,bulldozer:0,x:1510,y:1000,z:1200,runover:4.5,ko:0,bbq:false,launch:{elapsed:.5,duration:1.6,offMap:true}};
+frame(flying,3);const sheepGroup=dozer.parent.parent;assert.equal(sheepGroup.visible,true);assert.equal(sheepGroup.position.x,(1510-600)/60);assert.equal(sheepGroup.position.z,(1000-400)/50);assert.ok(sheepGroup.position.y>11);assert.equal(dozer.parent.rotation.z,0);assert.ok(body.getObjectByName('Party hat').visible);
+flying.launch.elapsed=1.6;frame(flying,3.1);assert.equal(sheepGroup.visible,false);frame({...base,bulldozer:0,runover:0,launch:null},3.2);assert.equal(sheepGroup.visible,true);assert.equal(sheepGroup.position.x,0);assert.equal(dozer.parent.rotation.z,0);
+console.log('PASS runover flight crosses map boundaries unclamped, waits hidden and restores original sheep');
+const ellipseArgs=[],flightCalls=[];const flightCtx=new Proxy({ellipse:(...args)=>ellipseArgs.push(args),translate:(...args)=>flightCalls.push(args),fillText:t=>flightCalls.push(t)},{get:(o,k)=>o[k]||noop,set:()=>true});const flightView=sandbox.window.MeadowFallback.create({getContext:()=>flightCtx});flying.launch.elapsed=.5;flightView.sheep(flying);assert.ok(flightCalls.some(c=>Array.isArray(c)&&c[0]===1510&&c[1]===-200));assert.ok(flightCalls.some(c=>typeof c==='string'&&c.includes('FLUNG 5s')));assert.ok(ellipseArgs.every(c=>c[2]>0&&c[3]>0));flightCalls.length=0;flying.launch.elapsed=1.6;flightView.sheep(flying);assert.equal(flightCalls.length,0);
+console.log('PASS Canvas high flight keeps positive shadow radii, raw displacement and hidden countdown wait');
