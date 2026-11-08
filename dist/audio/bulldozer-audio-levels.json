@@ -1,0 +1,37 @@
+{
+  "bulldozer-rodeo": {
+    "seconds": 25.6,
+    "source_peak_dbfs": -4.15,
+    "source_rms_dbfs": -19.51
+  },
+  "dozer-sign-hit": {
+    "seconds": 0.3,
+    "source_peak_dbfs": -2.73,
+    "source_rms_dbfs": -21.51
+  },
+  "dozer-start": {
+    "seconds": 1.25,
+    "source_peak_dbfs": -2.16,
+    "source_rms_dbfs": -12.83
+  },
+  "dozer-charge": {
+    "seconds": 0.6,
+    "source_peak_dbfs": -3.74,
+    "source_rms_dbfs": -9.02
+  },
+  "dozer-crunch": {
+    "seconds": 0.45,
+    "source_peak_dbfs": -2.27,
+    "source_rms_dbfs": -20.54
+  },
+  "dozer-launch": {
+    "seconds": 0.52,
+    "source_peak_dbfs": -3.88,
+    "source_rms_dbfs": -14.69
+  },
+  "dozer-horn": {
+    "seconds": 0.65,
+    "source_peak_dbfs": -3.61,
+    "source_rms_dbfs": -11.98
+  }
+}

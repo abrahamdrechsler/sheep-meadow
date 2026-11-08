@@ -1,0 +1,37 @@
+{
+  "bulldozer-rodeo.mp3": {
+    "decoded_seconds": 25.6,
+    "mono_peak_dbfs": -1.6,
+    "mono_rms_dbfs": -16.99
+  },
+  "dozer-sign-hit.mp3": {
+    "decoded_seconds": 0.3,
+    "mono_peak_dbfs": -3.19,
+    "mono_rms_dbfs": -21.96
+  },
+  "dozer-start.mp3": {
+    "decoded_seconds": 1.25,
+    "mono_peak_dbfs": -2.59,
+    "mono_rms_dbfs": -13.27
+  },
+  "dozer-charge.mp3": {
+    "decoded_seconds": 0.6,
+    "mono_peak_dbfs": -4.18,
+    "mono_rms_dbfs": -9.47
+  },
+  "dozer-crunch.mp3": {
+    "decoded_seconds": 0.45,
+    "mono_peak_dbfs": -2.7,
+    "mono_rms_dbfs": -21.01
+  },
+  "dozer-launch.mp3": {
+    "decoded_seconds": 0.52,
+    "mono_peak_dbfs": -4.32,
+    "mono_rms_dbfs": -15.14
+  },
+  "dozer-horn.mp3": {
+    "decoded_seconds": 0.65,
+    "mono_peak_dbfs": -4.05,
+    "mono_rms_dbfs": -12.43
+  }
+}

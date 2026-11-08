@@ -16,7 +16,7 @@ Hops rise quickly and float down. A descending landing on another live sheep reb
 
 A valid forward bite removes one health and briefly glows/shakes the victim red. Three ordinary hits cause a cartoon knockout with a short original “wah-wah.” Respawn takes five seconds and preserves selected cosmetics. Reduced-motion preferences suppress the hit shake and reduce decorative movement.
 
-After two active minutes, one bouncing/rolling egg appears. Its third valid bite grants the biter 30 seconds as a red dragon. The scene darkens and boss music replaces the meadow track. The slower dragon breathes a fixed-direction narrow line of fire with B and a two-second recharge; it scorches the ground and nearby trees. Sheep hit by fire receive a cartoon charcoal/furless/upside-down knockout. No gore. When power ends, the normal sheep, scene and music return; the next two-minute egg interval starts. One egg or dragon is active at a time. Timers pause when the page is hidden, independent controls retain their slots across reconnects, and near-simultaneous bites resolve deterministically.
+After 90 active seconds, a dragon egg or stationary silver construction sign appears, alternating after each is claimed. Its third valid bite grants the biter 30 seconds as a red dragon. The scene darkens and boss music replaces the meadow track. The slower dragon breathes a fixed-direction narrow line of fire with B and a two-second recharge; it scorches the ground and nearby trees. Sheep hit by fire receive a cartoon charcoal/furless/upside-down knockout. No gore. When power ends, the normal sheep, scene and music return; the next 90-second event interval starts. One egg or dragon is active at a time. Timers pause when the page is hidden, independent controls retain their slots across reconnects, and near-simultaneous bites resolve deterministically.
 
 ## Build and test
 
@@ -28,7 +28,7 @@ Requirements: Node.js and npm.
 
 Host `dist/` with any static HTTP server. Assets use relative URLs for subdirectory hosting. No backend, external login, chat or data collection is implemented. The committed runtime assets are ready to serve.
 
-For local testing only, localhost/127.0.0.1 with `?qa=1` exposes accelerated encounter tools under Controller check. Those tools are not enabled on public hostnames. Normal egg/power timers are 120/30 seconds.
+For local testing only, localhost/127.0.0.1 with `?qa=1` exposes accelerated encounter tools under Controller check. Those tools are not enabled on public hostnames. Normal egg/power timers are 90/30 seconds.
 
 ## Third-party licenses
 
@@ -46,3 +46,7 @@ CC0: https://creativecommons.org/publicdomain/zero/1.0/
 CC BY 4.0: https://creativecommons.org/licenses/by/4.0/
 
 The knockout sound is an original Web Audio synthesis, not a sampled third-party recording. Third-party code/assets retain their own licenses; no project-wide license has been selected for the original game code. No reference images or videos are bundled.
+
+## Bulldozer event
+
+Three bites on the warning sign give its biter a 30-second sheep-driven bulldozer. Aim using the stick, then press B to commit to a straight charge until the map boundary. Steering resumes afterward with a 1.2-second recharge. X honks. Charges leave temporary tracks, topple trees and launch sheep without health damage. Trees recover and normal music returns when the mode ends. Original western/rodeo music and effects have provenance in the visible audio credits; source generators are in scripts/.

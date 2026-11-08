@@ -1,0 +1,24 @@
+Bulldozer audio additions, 2026-11-08
+
+All seven new MP3s are original procedural synthesis for this game, composed
+and rendered with scripts/generate-dozer-audio.py. No third-party samples,
+recordings or compositions were used. No external copyright or license claim
+is invented. Existing meadow and dragon asset attributions remain unchanged.
+
+bulldozer-rodeo.mp3: 25.60 s, 150 BPM, 16 bars, original A-minor western chase.
+Synthesized picked/banjo-like lead and chords, walking bass, kick, snare,
+high-hat and brass responses. Stereo, MP3 128 kbps, 32 kHz.
+dozer-sign-hit.mp3: 0.30 s, wooden thud and metal-like rattle.
+dozer-start.mp3: 1.25 s, accelerating engine, gear clunks and brass resolution.
+dozer-charge.mp3: 0.60 s, rising engine rev and moving air.
+dozer-crunch.mp3: 0.45 s, clustered branch snaps and low impact.
+dozer-launch.mp3: 0.52 s, rising elastic cartoon twang.
+dozer-horn.mp3: 0.65 s, two rounded double-tone truck-horn notes.
+Effects: mono MP3, 128 kbps, 32 kHz. Seeded deterministic synthesis.
+
+Verification: all seven files fully decoded using ffmpeg; decoded peaks below
+0 dBFS, finite samples, expected durations. Source and decoded level reports
+are alongside this file. Automated mock Web Audio tests verify switching,
+position restore, mute/visibility behavior and eight-effect-voice cap.
+No listening device/audio audition facility available in this worker; sound
+quality has not been claimed as verified by human listening.

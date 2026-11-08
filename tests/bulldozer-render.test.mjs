@@ -1,0 +1,24 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+import {create} from '../src/meadow3d.js';
+const gpuLabels=[];const noop=()=>{},motion={matches:false};
+globalThis.devicePixelRatio=1;globalThis.matchMedia=()=>motion;
+globalThis.document={createElement:()=>({width:0,height:0,getContext:()=>new Proxy({fillText:t=>gpuLabels.push(t),getImageData:(x,y,w,h)=>({data:new Uint8ClampedArray(w*h*4)})},{get:(o,k)=>o[k]||noop,set:()=>true})})};
+let scene;class Renderer{constructor(){this.shadowMap={};}setPixelRatio(){}setSize(){}render(s){scene=s;s.updateMatrixWorld(true);}}
+const view=create({clientWidth:1280,clientHeight:800},Renderer),base={id:'p0',n:0,x:600,y:400,z:0,walk:.3,heading:.7,ko:0,bite:0,health:3,hat:2,baa:0,color:'#eaa0a0',woolColor:'#a9d9f3',dragon:0,fire:0,bbq:false,bulldozer:30};
+const trees=[[132,170],[1056,175],[1080,595],[540,140],[372,655],[90,315],[180,580]].map(([x,y],id)=>({id,x,y,fallen:false,heading:0,fallTime:0}));
+const state={egg:{kind:'bulldozer',x:450,y:350,hits:1,hit:.2},tracks:[],trees};
+function frame(s=base,t=0){view.world(state);view.begin();view.sheep(s);view.render(t);}
+frame();const dozer=scene.getObjectByName('sheep-bulldozer'),sign=scene.getObjectByName('construction-sign'),egg=scene.getObjectByName('dragon-egg'),blade=scene.getObjectByName('curved-bulldozer-blade'),tracks=scene.getObjectByName('bulldozer-ground-tracks');
+assert.ok(dozer.visible&&sign.visible&&!egg.visible);assert.ok(blade.geometry.attributes.position.count>=26);assert.equal(dozer.getObjectByName('bulldozer-tread-shoes').count,48);const body=dozer.parent.children.find(o=>o!==dozer&&o.isGroup);assert.ok(body.visible);assert.ok(body.getObjectByName('Party hat').visible);assert.ok(body.position.y>.6);assert.ok(body.scale.x<.7);let woolCount=0;body.traverse(o=>{if(o.isMesh&&o.material.color.getHexString()==='a9d9f3')woolCount++;});assert.ok(woolCount>30);
+console.log('PASS silver stationary sign replaces egg; curved blade/twin treads with original wool and hat driver');
+const signPos=sign.position.clone();state.egg.roll=3;state.egg.z=100;frame(base,.1);assert.ok(sign.position.equals(signPos));
+state.tracks=Array.from({length:80},(_,id)=>({id,x:500,y:400,x2:520,y2:400,heading:0,life:10,maxLife:12}));trees[0].fallen=true;trees[0].fallTime=.5;frame(base,.2);assert.equal(tracks.count,576);assert.ok([...tracks.instanceMatrix.array].every(Number.isFinite));const tree=scene.children.find(o=>o.isGroup&&Math.abs(o.position.x+7.8)<.01);assert.ok(Math.abs(tree.rotation.z)>1.4);const geo=tracks.geometry;frame(base,.3);assert.equal(tracks.geometry,geo);trees[0].fallen=false;frame({...base,bulldozer:0},.4);assert.ok(Math.abs(tree.rotation.z)>0);for(let i=5;i<20;i++)frame({...base,bulldozer:0},i/10);assert.ok(Math.abs(tree.rotation.z)<.01);assert.ok(!dozer.visible);assert.ok(body.scale.x>1);assert.ok(body.position.y<.1);
+console.log('PASS bounded instanced tracks, real tree fall and gentle reset; sheep geometry returns unchanged');
+motion.matches=true;frame({...base,z:160,launch:{vx:300,vy:0}},2);assert.ok(dozer.parent.parent.position.y>1.6);assert.equal(dozer.parent.rotation.z,0);assert.ok(dozer.visible);state.egg=null;state.tracks=[];frame(base,2.1);assert.equal(sign.visible,false);assert.equal(tracks.count,0);
+console.log('PASS airborne launch uses existing height, reduced motion avoids tumbling, events clean up');
+const labels=[],colors=[];const ctx=new Proxy({fillText:t=>labels.push(t)},{get:(o,k)=>o[k]||noop,set:(o,k,v)=>{if(k==='fillStyle')colors.push(v);return true;}});const sandbox={window:{},Math,Float32Array,matchMedia:()=>motion};vm.createContext(sandbox);vm.runInContext(fs.readFileSync(new URL('../dist/fallback.js',import.meta.url),'utf8'),sandbox);const fallback=sandbox.window.MeadowFallback.create({getContext:()=>ctx});state.egg={kind:'bulldozer',x:450,y:350,hits:2};fallback.world(state);fallback.begin();fallback.sheep(base);assert.ok(labels.includes('!'));assert.ok(labels.some(s=>s.includes('DOZER 30s')));assert.ok(colors.includes('#e5b640'));assert.ok(colors.includes('#d7dfd3'));assert.ok(colors.includes('#a9d9f3'));
+console.log('PASS Canvas shares sign, timer, vehicle, custom wool and original hat drawing');
+
+gpuLabels.length=0;frame({...base,baa:1},3);assert.ok(gpuLabels.includes("HONK!"));assert.ok(!gpuLabels.includes("Baaa!"));labels.length=0;fallback.sheep({...base,baa:1});assert.ok(labels.includes("HONK!"));assert.ok(!labels.includes("Baaa!"));console.log("PASS both renderers label bulldozer X as HONK rather than Baaa");
